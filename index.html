@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="description" content="瞳孔サイズ測定による動眼神経評価アプリ - Functional Neuro Training">
+    <title>瞳孔評価 - Pupil Assessment</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="FNT512.png">
+    <link rel="icon" type="image/png" href="FNT512.png">
+    
+    <!-- TensorFlow.js & Face Landmarks Detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@1.0.5/dist/face-landmarks-detection.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #00d4aa;
+            --primary-dark: #00a88a;
+            --secondary: #4a9eff;
+            --warning: #ffaa00;
+            --danger: #ff5566;
+            --bg-dark: #0a0a0f;
+            --bg-card: #141420;
+            --bg-panel: #1a1a2e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: auto;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            position: fixed;
+            inset: 0;
+        }
+
+        /* スプラッシュスクリーン */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, #0a0a0f 0%, #141420 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        #splash-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .splash-logo {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 24px;
+            animation: pulse-logo 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-logo {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+
+        .splash-brand {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .splash-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .splash-copyright {
+            font-size: 11px;
+            color: var(--text-muted);
+            position: absolute;
+            bottom: calc(20px + var(--safe-bottom));
+        }
+
+        /* メインコンテナ */
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
+            padding-left: var(--safe-left);
+            padding-right: var(--safe-right);
+        }
+
+        /* ヘッダー */
+        header {
+            background: var(--bg-card);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .menu-btn:hover, .menu-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .menu-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-primary);
+        }
+
+        /* メインエリア */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* カメラビュー */
+        #camera-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        #canvas-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        /* ガイドフレーム */
+        .guide-frame {
+            position: absolute;
+            width: 280px;
+            height: 160px;
+            border: 2px solid var(--primary);
+            border-radius: 80px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+
+        .guide-text {
+            position: absolute;
+            bottom: calc(50% + 100px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        /* 結果パネル */
+        #result-panel {
+            background: var(--bg-card);
+            padding: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .result-item {
+            background: var(--bg-panel);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .result-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .result-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .result-value.warning {
+            color: var(--warning);
+        }
+
+        .result-value.danger {
+            color: var(--danger);
+        }
+
+        .result-unit {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* ステータスバー */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--bg-panel);
+            border-radius: 8px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-dot.active {
+            background: var(--primary);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 212, 170, 0.4); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(0, 212, 170, 0); }
+        }
+
+        /* アセスメント結果 */
+        .assessment-result {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .assessment-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .badge-normal {
+            background: rgba(0, 212, 170, 0.2);
+            color: var(--primary);
+        }
+
+        .badge-mild {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-significant {
+            background: rgba(255, 85, 102, 0.2);
+            color: var(--danger);
+        }
+
+        /* コントロールボタン */
+        .control-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .btn-primary:hover, .btn-primary:active {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg-panel);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover, .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* サイドメニュー */
+        #menu-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        #menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #side-menu {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 320px;
+            max-width: 85vw;
+            height: 100%;
+            background: var(--bg-card);
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
+        }
+
+        #side-menu.active {
+            transform: translateX(0);
+        }
+
+        .menu-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .menu-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover, .close-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .close-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-primary);
+        }
+
+        .menu-content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: auto !important;
+            padding: 20px;
+        }
+
+        .menu-content * {
+            touch-action: auto !important;
+        }
+
+        .info-section {
+            margin-bottom: 24px;
+        }
+
+        .info-section h3 {
+            font-size: 14px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-section p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .info-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-list li {
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .info-list li::before {
+            content: '•';
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .threshold-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        .threshold-table th,
+        .threshold-table td {
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .threshold-table th {
+            background: var(--bg-panel);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .threshold-table td {
+            color: var(--text-primary);
+        }
+
+        /* フッター */
+        footer {
+            background: var(--bg-card);
+            padding: 8px 16px;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .footer-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        /* ローディング */
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(10, 10, 15, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--bg-panel);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* エラー表示 */
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .error-message.hidden {
+            display: none;
+        }
+
+        .error-icon {
+            width: 48px;
+            height: 48px;
+            fill: var(--danger);
+            margin-bottom: 16px;
+        }
+
+        .error-title {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--danger);
+        }
+
+        .error-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        /* 履歴表示 */
+        .history-panel {
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--bg-panel);
+            border-radius: 12px;
+        }
+
+        .history-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 13px;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-time {
+            color: var(--text-muted);
+        }
+
+        .history-values {
+            display: flex;
+            gap: 16px;
+        }
+
+        .history-diff {
+            font-weight: 600;
+        }
+
+        /* カメラ切替ボタン */
+        .camera-switch {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.6);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+
+        .camera-switch:hover, .camera-switch:active {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .camera-switch svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        /* PWAインストールプロンプト */
+        .install-prompt {
+            position: fixed;
+            bottom: calc(20px + var(--safe-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            padding: 16px 20px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            z-index: 500;
+            max-width: 90%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .install-prompt.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .install-prompt-text {
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .install-prompt-btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .install-prompt-close {
+            background: none;
+            border: none;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.6;
+        }
+
+        .install-prompt-close svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- スプラッシュスクリーン -->
+    <div id="splash-screen">
+        <img src="FNT512.png" alt="FNT Logo" class="splash-logo">
+        <div class="splash-brand">Functional Neuro Training</div>
+        <div class="splash-title">瞳孔評価 - Pupil Assessment</div>
+        <span class="splash-copyright">© 2025 Functional Neuro Training</span>
+    </div>
+
+    <!-- メインアプリ -->
+    <div id="app-container">
+        <!-- ヘッダー -->
+        <header>
+            <div class="header-left">
+                <img src="FNT512-transparent.png" alt="FNT" class="header-logo">
+                <span class="header-title">瞳孔評価</span>
+            </div>
+            <button class="menu-btn" id="menu-toggle" aria-label="メニュー">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                </svg>
+            </button>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main>
+            <div id="camera-container">
+                <video id="video" playsinline autoplay muted></video>
+                <canvas id="canvas-overlay"></canvas>
+                
+                <div class="guide-frame"></div>
+                <div class="guide-text" id="guide-text">顔をフレーム内に合わせてください</div>
+                
+                <button class="camera-switch" id="camera-switch" aria-label="カメラ切替">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M9 12c0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3-3 1.34-3 3zm13-2V6h-4l-2-2H8L6 6H2v4l2 2-2 2v4h4l2 2h6l2-2h4v-4l-2-2 2-2zm-10 5c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
+                    </svg>
+                </button>
+                
+                <!-- ローディング -->
+                <div class="loading-overlay" id="loading-overlay">
+                    <div class="spinner"></div>
+                    <div class="loading-text" id="loading-text">AIモデルを読み込み中...</div>
+                </div>
+                
+                <!-- エラー -->
+                <div class="error-message hidden" id="error-message">
+                    <svg class="error-icon" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                    <div class="error-title">エラー</div>
+                    <div class="error-text" id="error-text">カメラにアクセスできません</div>
+                    <button class="btn btn-primary" onclick="location.reload()">再試行</button>
+                </div>
+            </div>
+
+            <!-- 結果パネル -->
+            <div id="result-panel">
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div class="result-label">左瞳孔</div>
+                        <div class="result-value" id="left-pupil">--<span class="result-unit">mm</span></div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">右瞳孔</div>
+                        <div class="result-value" id="right-pupil">--<span class="result-unit">mm</span></div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">左右差</div>
+                        <div class="result-value" id="pupil-diff">--<span class="result-unit">mm</span></div>
+                    </div>
+                </div>
+                
+                <div class="status-bar">
+                    <div class="status-indicator">
+                        <div class="status-dot" id="status-dot"></div>
+                        <span id="status-text">準備中</span>
+                    </div>
+                    <div class="assessment-result" id="assessment-result">
+                        <span class="assessment-badge badge-normal" id="assessment-badge">--</span>
+                    </div>
+                </div>
+                
+                <div class="control-buttons">
+                    <button class="btn btn-secondary" id="capture-btn" disabled>
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
+                            <circle cx="12" cy="12" r="5"/>
+                        </svg>
+                        撮影・記録
+                    </button>
+                    <button class="btn btn-primary" id="start-btn" disabled>
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        測定開始
+                    </button>
+                </div>
+                
+                <!-- 履歴 -->
+                <div class="history-panel" id="history-panel" style="display: none;">
+                    <div class="history-title">測定履歴</div>
+                    <div id="history-list"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- フッター -->
+        <footer>
+            <div class="footer-text">© 2025 Functional Neuro Training</div>
+        </footer>
+    </div>
+
+    <!-- サイドメニュー -->
+    <div id="menu-overlay"></div>
+    <div id="side-menu">
+        <div class="menu-header">
+            <span class="menu-title">使い方・情報</span>
+            <button class="close-btn" id="menu-close">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="menu-content">
+            <div class="info-section">
+                <h3>神経科学的背景</h3>
+                <p>
+                    <strong>瞳孔不同（Anisocoria）</strong>は、左右の瞳孔サイズの差異を指し、
+                    動眼神経（第III脳神経）の機能評価において重要な指標です。
+                </p>
+                <p>
+                    瞳孔の大きさは、副交感神経（動眼神経経由）による縮瞳と、
+                    交感神経による散瞳のバランスで決まります。
+                    左右差が生じる場合、以下の神経学的状態を示唆することがあります：
+                </p>
+                <ul class="info-list">
+                    <li>動眼神経麻痺（第III脳神経障害）</li>
+                    <li>Horner症候群（交感神経障害）</li>
+                    <li>Adie瞳孔（毛様体神経節障害）</li>
+                    <li>外傷性脳損傷</li>
+                    <li>脳卒中・脳腫瘍</li>
+                    <li>薬物の影響</li>
+                </ul>
+            </div>
+
+            <div class="info-section">
+                <h3>評価基準</h3>
+                <table class="threshold-table">
+                    <tr>
+                        <th>左右差</th>
+                        <th>評価</th>
+                    </tr>
+                    <tr>
+                        <td>0.5mm以下</td>
+                        <td style="color: var(--primary);">正常範囲</td>
+                    </tr>
+                    <tr>
+                        <td>0.5〜1.0mm</td>
+                        <td style="color: var(--warning);">軽度不同</td>
+                    </tr>
+                    <tr>
+                        <td>1.0mm以上</td>
+                        <td style="color: var(--danger);">臨床的に有意</td>
+                    </tr>
+                </table>
+                <p style="margin-top: 12px; font-size: 12px;">
+                    ※ 約20%の健常者に0.4mm程度の生理的瞳孔不同がみられます。
+                </p>
+            </div>
+
+            <div class="info-section">
+                <h3>使用方法</h3>
+                <ul class="info-list">
+                    <li>明るすぎず暗すぎない環境で測定</li>
+                    <li>カメラから約30〜50cm離れる</li>
+                    <li>顔をガイドフレーム内に合わせる</li>
+                    <li>「測定開始」で自動測定開始</li>
+                    <li>「撮影・記録」で現在値を記録</li>
+                    <li>前面カメラ推奨（ミラー表示）</li>
+                </ul>
+            </div>
+
+            <div class="info-section">
+                <h3>注意事項</h3>
+                <p style="color: var(--warning);">
+                    本アプリは参考用のスクリーニングツールです。
+                    医学的診断には使用できません。
+                    異常値が継続する場合は、必ず医療専門家にご相談ください。
+                </p>
+                <p>
+                    測定精度は照明条件、カメラ品質、顔の位置などに影響されます。
+                    複数回測定して平均値を参考にしてください。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWAインストールプロンプト -->
+    <div class="install-prompt" id="install-prompt">
+        <span class="install-prompt-text">ホーム画面に追加できます</span>
+        <button class="install-prompt-btn" id="install-btn">インストール</button>
+        <button class="install-prompt-close" id="install-close">
+            <svg viewBox="0 0 24 24">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        // アプリケーション状態
+        const state = {
+            model: null,
+            video: null,
+            canvas: null,
+            ctx: null,
+            isRunning: false,
+            isMeasuring: false,
+            facingMode: 'user',
+            stream: null,
+            measurements: [],
+            history: [],
+            smoothedLeft: 0,
+            smoothedRight: 0,
+            smoothingFactor: 0.3,
+            calibrationFactor: 1.0 // 推定mm変換係数
+        };
+
+        // DOM要素
+        const elements = {
+            splash: document.getElementById('splash-screen'),
+            video: document.getElementById('video'),
+            canvas: document.getElementById('canvas-overlay'),
+            loadingOverlay: document.getElementById('loading-overlay'),
+            loadingText: document.getElementById('loading-text'),
+            errorMessage: document.getElementById('error-message'),
+            errorText: document.getElementById('error-text'),
+            guideText: document.getElementById('guide-text'),
+            leftPupil: document.getElementById('left-pupil'),
+            rightPupil: document.getElementById('right-pupil'),
+            pupilDiff: document.getElementById('pupil-diff'),
+            statusDot: document.getElementById('status-dot'),
+            statusText: document.getElementById('status-text'),
+            assessmentBadge: document.getElementById('assessment-badge'),
+            startBtn: document.getElementById('start-btn'),
+            captureBtn: document.getElementById('capture-btn'),
+            cameraSwitch: document.getElementById('camera-switch'),
+            menuToggle: document.getElementById('menu-toggle'),
+            menuOverlay: document.getElementById('menu-overlay'),
+            sideMenu: document.getElementById('side-menu'),
+            menuClose: document.getElementById('menu-close'),
+            historyPanel: document.getElementById('history-panel'),
+            historyList: document.getElementById('history-list'),
+            installPrompt: document.getElementById('install-prompt'),
+            installBtn: document.getElementById('install-btn'),
+            installClose: document.getElementById('install-close')
+        };
+
+        // 初期化
+        async function init() {
+            state.video = elements.video;
+            state.canvas = elements.canvas;
+            state.ctx = state.canvas.getContext('2d');
+
+            // イベントリスナー設定
+            setupEventListeners();
+
+            // カメラ初期化
+            await initCamera();
+
+            // AIモデル読み込み
+            await loadModel();
+
+            // スプラッシュ非表示
+            setTimeout(() => {
+                elements.splash.classList.add('hidden');
+            }, 1500);
+        }
+
+        // イベントリスナー設定
+        function setupEventListeners() {
+            // メニュー
+            elements.menuToggle.addEventListener('click', openMenu);
+            elements.menuOverlay.addEventListener('click', closeMenu);
+            elements.menuClose.addEventListener('click', closeMenu);
+
+            // カメラ切替
+            elements.cameraSwitch.addEventListener('click', switchCamera);
+
+            // 測定ボタン
+            elements.startBtn.addEventListener('click', toggleMeasurement);
+            elements.captureBtn.addEventListener('click', captureResult);
+
+            // PWAインストール
+            elements.installClose.addEventListener('click', () => {
+                elements.installPrompt.classList.remove('show');
+            });
+
+            // ウィンドウリサイズ
+            window.addEventListener('resize', resizeCanvas);
+
+            // iOS Safari のスクロール防止
+            document.body.addEventListener('touchmove', (e) => {
+                if (!e.target.closest('.menu-content')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
+        // メニュー開閉
+        function openMenu() {
+            elements.menuOverlay.classList.add('active');
+            elements.sideMenu.classList.add('active');
+        }
+
+        function closeMenu() {
+            elements.menuOverlay.classList.remove('active');
+            elements.sideMenu.classList.remove('active');
+        }
+
+        // カメラ初期化
+        async function initCamera() {
+            try {
+                elements.loadingText.textContent = 'カメラを起動中...';
+                
+                if (state.stream) {
+                    state.stream.getTracks().forEach(track => track.stop());
+                }
+
+                const constraints = {
+                    video: {
+                        facingMode: state.facingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+
+                state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                state.video.srcObject = state.stream;
+                
+                await new Promise((resolve) => {
+                    state.video.onloadedmetadata = () => {
+                        state.video.play();
+                        resolve();
+                    };
+                });
+
+                resizeCanvas();
+                
+            } catch (error) {
+                console.error('Camera error:', error);
+                showError('カメラにアクセスできません。カメラの権限を確認してください。');
+            }
+        }
+
+        // カメラ切替
+        async function switchCamera() {
+            state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
+            state.video.style.transform = state.facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+            await initCamera();
+        }
+
+        // キャンバスリサイズ
+        function resizeCanvas() {
+            const container = document.getElementById('camera-container');
+            state.canvas.width = container.clientWidth;
+            state.canvas.height = container.clientHeight;
+        }
+
+        // AIモデル読み込み
+        async function loadModel() {
+            try {
+                elements.loadingText.textContent = 'AIモデルを読み込み中...';
+                
+                // Face Landmarks Detection モデル読み込み
+                state.model = await faceLandmarksDetection.createDetector(
+                    faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
+                    {
+                        runtime: 'tfjs',
+                        refineLandmarks: true,
+                        maxFaces: 1
+                    }
+                );
+
+                elements.loadingOverlay.classList.add('hidden');
+                elements.startBtn.disabled = false;
+                elements.captureBtn.disabled = false;
+                updateStatus('準備完了', false);
+                
+            } catch (error) {
+                console.error('Model loading error:', error);
+                showError('AIモデルの読み込みに失敗しました。');
+            }
+        }
+
+        // エラー表示
+        function showError(message) {
+            elements.loadingOverlay.classList.add('hidden');
+            elements.errorMessage.classList.remove('hidden');
+            elements.errorText.textContent = message;
+        }
+
+        // ステータス更新
+        function updateStatus(text, active) {
+            elements.statusText.textContent = text;
+            if (active) {
+                elements.statusDot.classList.add('active');
+            } else {
+                elements.statusDot.classList.remove('active');
+            }
+        }
+
+        // 測定開始/停止
+        function toggleMeasurement() {
+            if (state.isMeasuring) {
+                stopMeasurement();
+            } else {
+                startMeasurement();
+            }
+        }
+
+        function startMeasurement() {
+            state.isMeasuring = true;
+            state.isRunning = true;
+            elements.startBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 6h12v12H6z"/>
+                </svg>
+                測定停止
+            `;
+            updateStatus('測定中', true);
+            detectFaces();
+        }
+
+        function stopMeasurement() {
+            state.isMeasuring = false;
+            state.isRunning = false;
+            elements.startBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+                測定開始
+            `;
+            updateStatus('停止中', false);
+            
+            // キャンバスクリア
+            state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+        }
+
+        // 顔検出ループ
+        async function detectFaces() {
+            if (!state.isRunning || !state.model) return;
+
+            try {
+                const predictions = await state.model.estimateFaces(state.video, {
+                    flipHorizontal: state.facingMode === 'user'
+                });
+
+                // キャンバスクリア
+                state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+
+                if (predictions.length > 0) {
+                    const face = predictions[0];
+                    processFaceLandmarks(face);
+                    elements.guideText.textContent = '瞳孔を検出中...';
+                } else {
+                    elements.guideText.textContent = '顔をフレーム内に合わせてください';
+                    resetResults();
+                }
+
+            } catch (error) {
+                console.error('Detection error:', error);
+            }
+
+            if (state.isRunning) {
+                requestAnimationFrame(detectFaces);
+            }
+        }
+
+        // 顔ランドマーク処理
+        function processFaceLandmarks(face) {
+            const keypoints = face.keypoints;
+            
+            // MediaPipe Face Mesh の目のランドマークインデックス
+            // 左目（画像上では右）: 468（虹彩中心）
+            // 右目（画像上では左）: 473（虹彩中心）
+            // 虹彩の外側ポイントも使用して直径を推定
+            
+            // 左目の虹彩関連ポイント
+            const leftIrisCenter = keypoints[468]; // 左虹彩中心
+            const leftIrisInner = keypoints[469];  // 内側
+            const leftIrisOuter = keypoints[471];  // 外側
+            
+            // 右目の虹彩関連ポイント
+            const rightIrisCenter = keypoints[473]; // 右虹彩中心
+            const rightIrisInner = keypoints[474];  // 内側
+            const rightIrisOuter = keypoints[476];  // 外側
+
+            if (!leftIrisCenter || !rightIrisCenter) {
+                elements.guideText.textContent = '虹彩を検出できません。もう少し近づいてください。';
+                return;
+            }
+
+            // 画面座標に変換
+            const scaleX = state.canvas.width / state.video.videoWidth;
+            const scaleY = state.canvas.height / state.video.videoHeight;
+
+            // 左目の計算
+            const leftDiameter = calculateIrisDiameter(
+                leftIrisCenter, leftIrisInner, leftIrisOuter, scaleX, scaleY
+            );
+            
+            // 右目の計算
+            const rightDiameter = calculateIrisDiameter(
+                rightIrisCenter, rightIrisInner, rightIrisOuter, scaleX, scaleY
+            );
+
+            // 顔のサイズから瞳孔サイズを推定（キャリブレーション）
+            // 顔幅の参照（耳から耳）
+            const leftEar = keypoints[234];
+            const rightEar = keypoints[454];
+            if (leftEar && rightEar) {
+                const faceWidth = Math.sqrt(
+                    Math.pow((rightEar.x - leftEar.x) * scaleX, 2) +
+                    Math.pow((rightEar.y - leftEar.y) * scaleY, 2)
+                );
+                // 平均的な顔幅は約14cm、虹彩直径は約11-12mm
+                // 瞳孔は虹彩の約30-50%
+                state.calibrationFactor = 140 / faceWidth; // mm/px
+            }
+
+            // ピクセルからmmに変換（瞳孔は虹彩の約30-40%として推定）
+            const pupilRatio = 0.35; // 瞳孔/虹彩比
+            const leftPupilMM = leftDiameter * state.calibrationFactor * pupilRatio;
+            const rightPupilMM = rightDiameter * state.calibrationFactor * pupilRatio;
+
+            // スムージング
+            state.smoothedLeft = state.smoothedLeft * (1 - state.smoothingFactor) + 
+                                 leftPupilMM * state.smoothingFactor;
+            state.smoothedRight = state.smoothedRight * (1 - state.smoothingFactor) + 
+                                  rightPupilMM * state.smoothingFactor;
+
+            // 結果更新
+            updateResults(state.smoothedLeft, state.smoothedRight);
+
+            // 描画
+            drawEyeOverlay(leftIrisCenter, leftDiameter / 2 / state.calibrationFactor / pupilRatio, scaleX, scaleY, 'L');
+            drawEyeOverlay(rightIrisCenter, rightDiameter / 2 / state.calibrationFactor / pupilRatio, scaleX, scaleY, 'R');
+
+            elements.guideText.textContent = '測定中 - 顔を固定してください';
+        }
+
+        // 虹彩直径計算
+        function calculateIrisDiameter(center, inner, outer, scaleX, scaleY) {
+            const innerDist = Math.sqrt(
+                Math.pow((center.x - inner.x) * scaleX, 2) +
+                Math.pow((center.y - inner.y) * scaleY, 2)
+            );
+            const outerDist = Math.sqrt(
+                Math.pow((center.x - outer.x) * scaleX, 2) +
+                Math.pow((center.y - outer.y) * scaleY, 2)
+            );
+            return (innerDist + outerDist);
+        }
+
+        // 結果更新
+        function updateResults(leftMM, rightMM) {
+            const diff = Math.abs(leftMM - rightMM);
+            
+            // 表示更新
+            elements.leftPupil.innerHTML = `${leftMM.toFixed(1)}<span class="result-unit">mm</span>`;
+            elements.rightPupil.innerHTML = `${rightMM.toFixed(1)}<span class="result-unit">mm</span>`;
+            
+            // 差分表示
+            const diffClass = diff > 1.0 ? 'danger' : diff > 0.5 ? 'warning' : '';
+            elements.pupilDiff.className = `result-value ${diffClass}`;
+            elements.pupilDiff.innerHTML = `${diff.toFixed(1)}<span class="result-unit">mm</span>`;
+
+            // 評価バッジ更新
+            updateAssessment(diff);
+
+            // 測定値保存
+            state.measurements.push({ left: leftMM, right: rightMM, diff, time: Date.now() });
+            if (state.measurements.length > 30) {
+                state.measurements.shift();
+            }
+        }
+
+        // 評価更新
+        function updateAssessment(diff) {
+            let text, badgeClass;
+            
+            if (diff <= 0.5) {
+                text = '正常範囲';
+                badgeClass = 'badge-normal';
+            } else if (diff <= 1.0) {
+                text = '軽度不同';
+                badgeClass = 'badge-mild';
+            } else {
+                text = '要確認';
+                badgeClass = 'badge-significant';
+            }
+
+            elements.assessmentBadge.textContent = text;
+            elements.assessmentBadge.className = `assessment-badge ${badgeClass}`;
+        }
+
+        // 結果リセット
+        function resetResults() {
+            elements.leftPupil.innerHTML = '--<span class="result-unit">mm</span>';
+            elements.rightPupil.innerHTML = '--<span class="result-unit">mm</span>';
+            elements.pupilDiff.innerHTML = '--<span class="result-unit">mm</span>';
+            elements.pupilDiff.className = 'result-value';
+            elements.assessmentBadge.textContent = '--';
+            elements.assessmentBadge.className = 'assessment-badge badge-normal';
+        }
+
+        // 目のオーバーレイ描画
+        function drawEyeOverlay(center, radius, scaleX, scaleY, label) {
+            const x = center.x * scaleX;
+            const y = center.y * scaleY;
+            const r = radius;
+
+            // 外円（虹彩）
+            state.ctx.beginPath();
+            state.ctx.arc(x, y, r, 0, Math.PI * 2);
+            state.ctx.strokeStyle = 'rgba(0, 212, 170, 0.8)';
+            state.ctx.lineWidth = 2;
+            state.ctx.stroke();
+
+            // 内円（瞳孔推定）
+            state.ctx.beginPath();
+            state.ctx.arc(x, y, r * 0.35, 0, Math.PI * 2);
+            state.ctx.strokeStyle = 'rgba(74, 158, 255, 0.8)';
+            state.ctx.lineWidth = 2;
+            state.ctx.stroke();
+
+            // 中心点
+            state.ctx.beginPath();
+            state.ctx.arc(x, y, 3, 0, Math.PI * 2);
+            state.ctx.fillStyle = '#00d4aa';
+            state.ctx.fill();
+
+            // ラベル
+            state.ctx.font = '14px sans-serif';
+            state.ctx.fillStyle = '#ffffff';
+            state.ctx.textAlign = 'center';
+            state.ctx.fillText(label, x, y - r - 10);
+        }
+
+        // 結果記録
+        function captureResult() {
+            if (state.measurements.length === 0) return;
+
+            // 直近の測定値の平均を計算
+            const recent = state.measurements.slice(-10);
+            const avgLeft = recent.reduce((sum, m) => sum + m.left, 0) / recent.length;
+            const avgRight = recent.reduce((sum, m) => sum + m.right, 0) / recent.length;
+            const avgDiff = Math.abs(avgLeft - avgRight);
+
+            // 履歴に追加
+            const record = {
+                time: new Date().toLocaleTimeString('ja-JP'),
+                left: avgLeft.toFixed(1),
+                right: avgRight.toFixed(1),
+                diff: avgDiff.toFixed(1)
+            };
+            
+            state.history.unshift(record);
+            if (state.history.length > 10) {
+                state.history.pop();
+            }
+
+            // 履歴表示更新
+            updateHistoryDisplay();
+
+            // フィードバック
+            elements.captureBtn.textContent = '✓ 記録しました';
+            setTimeout(() => {
+                elements.captureBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
+                        <circle cx="12" cy="12" r="5"/>
+                    </svg>
+                    撮影・記録
+                `;
+            }, 1500);
+        }
+
+        // 履歴表示更新
+        function updateHistoryDisplay() {
+            if (state.history.length === 0) {
+                elements.historyPanel.style.display = 'none';
+                return;
+            }
+
+            elements.historyPanel.style.display = 'block';
+            elements.historyList.innerHTML = state.history.map(record => {
+                let diffClass = '';
+                if (parseFloat(record.diff) > 1.0) diffClass = 'danger';
+                else if (parseFloat(record.diff) > 0.5) diffClass = 'warning';
+                
+                return `
+                    <div class="history-item">
+                        <span class="history-time">${record.time}</span>
+                        <div class="history-values">
+                            <span>L:${record.left}</span>
+                            <span>R:${record.right}</span>
+                            <span class="history-diff ${diffClass ? `result-value ${diffClass}` : ''}" style="color: ${diffClass === 'danger' ? 'var(--danger)' : diffClass === 'warning' ? 'var(--warning)' : 'var(--primary)'}">Δ${record.diff}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // PWAインストール
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            elements.installPrompt.classList.add('show');
+        });
+
+        elements.installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                elements.installPrompt.classList.remove('show');
+            }
+        });
+
+        // Service Worker登録
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registered:', reg.scope))
+                .catch(err => console.log('SW registration failed:', err));
+        }
+
+        // 初期化実行
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

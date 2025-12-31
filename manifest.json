@@ -1,0 +1,37 @@
+{
+    "name": "瞳孔評価 - Pupil Assessment",
+    "short_name": "瞳孔評価",
+    "description": "瞳孔サイズ測定による動眼神経評価アプリ - Functional Neuro Training",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
+    "scope": "./",
+    "lang": "ja",
+    "categories": ["health", "medical", "utilities"],
+    "icons": [
+        {
+            "src": "FNT512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "FNT512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "FNT512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "form_factor": "narrow"
+        }
+    ],
+    "related_applications": [],
+    "prefer_related_applications": false
+}
