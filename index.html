@@ -321,15 +321,6 @@
             50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(0, 212, 170, 0); }
         }
 
-        /* アセスメント結果 */
-        .assessment-result {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
         .assessment-badge {
             padding: 4px 12px;
             border-radius: 20px;
@@ -547,10 +538,6 @@
             font-weight: 500;
         }
 
-        .threshold-table td {
-            color: var(--text-primary);
-        }
-
         /* フッター */
         footer {
             background: var(--bg-card);
@@ -675,10 +662,6 @@
             gap: 16px;
         }
 
-        .history-diff {
-            font-weight: 600;
-        }
-
         /* カメラ切替ボタン */
         .camera-switch {
             position: absolute;
@@ -705,6 +688,260 @@
             width: 24px;
             height: 24px;
             fill: white;
+        }
+
+        /* ================================================
+           撮影モーダル（写真確認・手動調整）
+           ================================================ */
+        #capture-modal {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
+        }
+
+        #capture-modal.active {
+            display: flex;
+        }
+
+        .capture-header {
+            background: var(--bg-card);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .capture-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .capture-image-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        #captured-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        #capture-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* 瞳孔マーカー */
+        .pupil-marker {
+            position: absolute;
+            border: 3px solid var(--secondary);
+            border-radius: 50%;
+            cursor: move;
+            touch-action: none;
+            box-shadow: 0 0 10px rgba(74, 158, 255, 0.5), inset 0 0 20px rgba(74, 158, 255, 0.1);
+            transition: box-shadow 0.2s;
+        }
+
+        .pupil-marker:active {
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.8), inset 0 0 30px rgba(74, 158, 255, 0.2);
+        }
+
+        .pupil-marker.left {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(0, 212, 170, 0.5), inset 0 0 20px rgba(0, 212, 170, 0.1);
+        }
+
+        .pupil-marker.left:active {
+            box-shadow: 0 0 20px rgba(0, 212, 170, 0.8), inset 0 0 30px rgba(0, 212, 170, 0.2);
+        }
+
+        .pupil-marker .center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .pupil-marker.left .center-dot {
+            background: var(--primary);
+        }
+
+        .pupil-marker.right .center-dot {
+            background: var(--secondary);
+        }
+
+        .pupil-marker .label {
+            position: absolute;
+            top: -32px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .pupil-marker.left .label {
+            border: 1px solid var(--primary);
+        }
+
+        .pupil-marker.right .label {
+            border: 1px solid var(--secondary);
+        }
+
+        /* 調整パネル */
+        .capture-controls {
+            background: var(--bg-card);
+            padding: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .adjustment-section {
+            margin-bottom: 16px;
+        }
+
+        .adjustment-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .adjustment-label {
+            font-size: 13px;
+            min-width: 70px;
+            font-weight: 600;
+        }
+
+        .adjustment-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: var(--bg-panel);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .adjustment-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .adjustment-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .adjustment-slider.right-slider::-webkit-slider-thumb {
+            background: var(--secondary);
+        }
+
+        .adjustment-slider.right-slider::-moz-range-thumb {
+            background: var(--secondary);
+        }
+
+        .adjustment-value {
+            font-size: 16px;
+            font-weight: 600;
+            min-width: 65px;
+            text-align: right;
+        }
+
+        .diff-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background: var(--bg-panel);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .diff-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-right: 12px;
+        }
+
+        .diff-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .diff-value.normal { color: var(--primary); }
+        .diff-value.warning { color: var(--warning); }
+        .diff-value.danger { color: var(--danger); }
+
+        .capture-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* 説明テキスト */
+        .help-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        /* インストラクション表示 */
+        .instruction-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px 20px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .instruction-text {
+            font-size: 13px;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .instruction-text strong {
+            color: var(--primary);
         }
 
         /* PWAインストールプロンプト */
@@ -845,18 +1082,16 @@
                         <div class="status-dot" id="status-dot"></div>
                         <span id="status-text">準備中</span>
                     </div>
-                    <div class="assessment-result" id="assessment-result">
-                        <span class="assessment-badge badge-normal" id="assessment-badge">--</span>
-                    </div>
+                    <span class="assessment-badge badge-normal" id="assessment-badge">--</span>
                 </div>
                 
                 <div class="control-buttons">
                     <button class="btn btn-secondary" id="capture-btn" disabled>
                         <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
-                            <circle cx="12" cy="12" r="5"/>
+                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="12" cy="12" r="7"/>
                         </svg>
-                        撮影・記録
+                        撮影
                     </button>
                     <button class="btn btn-primary" id="start-btn" disabled>
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -880,6 +1115,80 @@
         </footer>
     </div>
 
+    <!-- 撮影モーダル -->
+    <div id="capture-modal">
+        <div class="capture-header">
+            <button class="close-btn" id="capture-close">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </button>
+            <h2>瞳孔サイズ調整</h2>
+            <div style="width: 40px;"></div>
+        </div>
+        
+        <div class="capture-image-container" id="capture-image-container">
+            <img id="captured-image" alt="Captured">
+            <canvas id="capture-canvas"></canvas>
+            
+            <!-- 左瞳孔マーカー -->
+            <div class="pupil-marker left" id="left-marker">
+                <div class="center-dot"></div>
+                <div class="label">L: <span id="left-marker-size">0.0</span>mm</div>
+            </div>
+            
+            <!-- 右瞳孔マーカー -->
+            <div class="pupil-marker right" id="right-marker">
+                <div class="center-dot"></div>
+                <div class="label">R: <span id="right-marker-size">0.0</span>mm</div>
+            </div>
+            
+            <div class="instruction-overlay">
+                <div class="instruction-text">
+                    <strong>●円をドラッグ</strong>して瞳孔位置を調整<br>
+                    <strong>スライダー</strong>で瞳孔サイズを調整
+                </div>
+            </div>
+        </div>
+        
+        <div class="capture-controls">
+            <div class="help-text">AI検出結果を手動で修正できます</div>
+            
+            <div class="adjustment-section">
+                <div class="adjustment-row">
+                    <span class="adjustment-label" style="color: var(--primary);">左瞳孔</span>
+                    <input type="range" class="adjustment-slider" id="left-size-slider" min="1" max="10" step="0.1" value="3">
+                    <span class="adjustment-value" style="color: var(--primary);" id="left-size-value">3.0mm</span>
+                </div>
+                <div class="adjustment-row">
+                    <span class="adjustment-label" style="color: var(--secondary);">右瞳孔</span>
+                    <input type="range" class="adjustment-slider right-slider" id="right-size-slider" min="1" max="10" step="0.1" value="3">
+                    <span class="adjustment-value" style="color: var(--secondary);" id="right-size-value">3.0mm</span>
+                </div>
+            </div>
+            
+            <div class="diff-display">
+                <span class="diff-label">左右差：</span>
+                <span class="diff-value normal" id="modal-diff-value">0.0mm</span>
+            </div>
+            
+            <div class="capture-buttons">
+                <button class="btn btn-secondary" id="retake-btn">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                    </svg>
+                    再撮影
+                </button>
+                <button class="btn btn-primary" id="save-btn">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    記録する
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- サイドメニュー -->
     <div id="menu-overlay"></div>
     <div id="side-menu">
@@ -901,7 +1210,6 @@
                 <p>
                     瞳孔の大きさは、副交感神経（動眼神経経由）による縮瞳と、
                     交感神経による散瞳のバランスで決まります。
-                    左右差が生じる場合、以下の神経学的状態を示唆することがあります：
                 </p>
                 <ul class="info-list">
                     <li>動眼神経麻痺（第III脳神経障害）</li>
@@ -909,7 +1217,6 @@
                     <li>Adie瞳孔（毛様体神経節障害）</li>
                     <li>外傷性脳損傷</li>
                     <li>脳卒中・脳腫瘍</li>
-                    <li>薬物の影響</li>
                 </ul>
             </div>
 
@@ -944,9 +1251,8 @@
                     <li>明るすぎず暗すぎない環境で測定</li>
                     <li>カメラから約30〜50cm離れる</li>
                     <li>顔をガイドフレーム内に合わせる</li>
-                    <li>「測定開始」で自動測定開始</li>
-                    <li>「撮影・記録」で現在値を記録</li>
-                    <li>前面カメラ推奨（ミラー表示）</li>
+                    <li>「測定開始」でリアルタイム測定</li>
+                    <li>「撮影」で写真撮影・手動調整</li>
                 </ul>
             </div>
 
@@ -955,11 +1261,6 @@
                 <p style="color: var(--warning);">
                     本アプリは参考用のスクリーニングツールです。
                     医学的診断には使用できません。
-                    異常値が継続する場合は、必ず医療専門家にご相談ください。
-                </p>
-                <p>
-                    測定精度は照明条件、カメラ品質、顔の位置などに影響されます。
-                    複数回測定して平均値を参考にしてください。
                 </p>
             </div>
         </div>
@@ -967,7 +1268,7 @@
 
     <!-- PWAインストールプロンプト -->
     <div class="install-prompt" id="install-prompt">
-        <span class="install-prompt-text">ホーム画面に追加できます</span>
+        <span class="install-prompt-text">ホーム画面に追加</span>
         <button class="install-prompt-btn" id="install-btn">インストール</button>
         <button class="install-prompt-close" id="install-close">
             <svg viewBox="0 0 24 24">
@@ -992,7 +1293,14 @@
             smoothedLeft: 0,
             smoothedRight: 0,
             smoothingFactor: 0.3,
-            calibrationFactor: 1.0 // 推定mm変換係数
+            calibrationFactor: 1.0,
+            capturedImageData: null,
+            detectedPupils: {
+                left: { x: 0.35, y: 0.5, size: 3 },
+                right: { x: 0.65, y: 0.5, size: 3 }
+            },
+            imageScale: 1,
+            imageOffset: { x: 0, y: 0 }
         };
 
         // DOM要素
@@ -1022,7 +1330,23 @@
             historyList: document.getElementById('history-list'),
             installPrompt: document.getElementById('install-prompt'),
             installBtn: document.getElementById('install-btn'),
-            installClose: document.getElementById('install-close')
+            installClose: document.getElementById('install-close'),
+            captureModal: document.getElementById('capture-modal'),
+            captureClose: document.getElementById('capture-close'),
+            capturedImage: document.getElementById('captured-image'),
+            captureCanvas: document.getElementById('capture-canvas'),
+            captureImageContainer: document.getElementById('capture-image-container'),
+            leftMarker: document.getElementById('left-marker'),
+            rightMarker: document.getElementById('right-marker'),
+            leftMarkerSize: document.getElementById('left-marker-size'),
+            rightMarkerSize: document.getElementById('right-marker-size'),
+            leftSizeSlider: document.getElementById('left-size-slider'),
+            rightSizeSlider: document.getElementById('right-size-slider'),
+            leftSizeValue: document.getElementById('left-size-value'),
+            rightSizeValue: document.getElementById('right-size-value'),
+            modalDiffValue: document.getElementById('modal-diff-value'),
+            retakeBtn: document.getElementById('retake-btn'),
+            saveBtn: document.getElementById('save-btn')
         };
 
         // 初期化
@@ -1031,16 +1355,10 @@
             state.canvas = elements.canvas;
             state.ctx = state.canvas.getContext('2d');
 
-            // イベントリスナー設定
             setupEventListeners();
-
-            // カメラ初期化
             await initCamera();
-
-            // AIモデル読み込み
             await loadModel();
 
-            // スプラッシュ非表示
             setTimeout(() => {
                 elements.splash.classList.add('hidden');
             }, 1500);
@@ -1048,35 +1366,82 @@
 
         // イベントリスナー設定
         function setupEventListeners() {
-            // メニュー
             elements.menuToggle.addEventListener('click', openMenu);
             elements.menuOverlay.addEventListener('click', closeMenu);
             elements.menuClose.addEventListener('click', closeMenu);
-
-            // カメラ切替
             elements.cameraSwitch.addEventListener('click', switchCamera);
-
-            // 測定ボタン
             elements.startBtn.addEventListener('click', toggleMeasurement);
-            elements.captureBtn.addEventListener('click', captureResult);
+            elements.captureBtn.addEventListener('click', capturePhoto);
+            elements.captureClose.addEventListener('click', closeCaptureModal);
+            elements.retakeBtn.addEventListener('click', retakePhoto);
+            elements.saveBtn.addEventListener('click', saveResult);
+            elements.leftSizeSlider.addEventListener('input', updateLeftSize);
+            elements.rightSizeSlider.addEventListener('input', updateRightSize);
 
-            // PWAインストール
+            setupMarkerDrag(elements.leftMarker, 'left');
+            setupMarkerDrag(elements.rightMarker, 'right');
+
             elements.installClose.addEventListener('click', () => {
                 elements.installPrompt.classList.remove('show');
             });
 
-            // ウィンドウリサイズ
             window.addEventListener('resize', resizeCanvas);
 
-            // iOS Safari のスクロール防止
             document.body.addEventListener('touchmove', (e) => {
-                if (!e.target.closest('.menu-content')) {
+                if (!e.target.closest('.menu-content') && !e.target.closest('.capture-controls')) {
                     e.preventDefault();
                 }
             }, { passive: false });
         }
 
-        // メニュー開閉
+        // マーカードラッグ設定
+        function setupMarkerDrag(marker, side) {
+            let isDragging = false;
+            let startX, startY, startLeft, startTop;
+
+            const onStart = (e) => {
+                isDragging = true;
+                const touch = e.touches ? e.touches[0] : e;
+                startX = touch.clientX;
+                startY = touch.clientY;
+                startLeft = marker.offsetLeft;
+                startTop = marker.offsetTop;
+                e.preventDefault();
+                e.stopPropagation();
+            };
+
+            const onMove = (e) => {
+                if (!isDragging) return;
+                const touch = e.touches ? e.touches[0] : e;
+                const dx = touch.clientX - startX;
+                const dy = touch.clientY - startY;
+                
+                const newLeft = startLeft + dx;
+                const newTop = startTop + dy;
+                
+                marker.style.left = newLeft + 'px';
+                marker.style.top = newTop + 'px';
+                
+                const rect = elements.captureImageContainer.getBoundingClientRect();
+                state.detectedPupils[side].x = (newLeft + marker.offsetWidth / 2) / rect.width;
+                state.detectedPupils[side].y = (newTop + marker.offsetHeight / 2) / rect.height;
+                
+                e.preventDefault();
+                e.stopPropagation();
+            };
+
+            const onEnd = () => {
+                isDragging = false;
+            };
+
+            marker.addEventListener('mousedown', onStart);
+            marker.addEventListener('touchstart', onStart, { passive: false });
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('mouseup', onEnd);
+            document.addEventListener('touchend', onEnd);
+        }
+
         function openMenu() {
             elements.menuOverlay.classList.add('active');
             elements.sideMenu.classList.add('active');
@@ -1087,7 +1452,6 @@
             elements.sideMenu.classList.remove('active');
         }
 
-        // カメラ初期化
         async function initCamera() {
             try {
                 elements.loadingText.textContent = 'カメラを起動中...';
@@ -1123,26 +1487,22 @@
             }
         }
 
-        // カメラ切替
         async function switchCamera() {
             state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
             state.video.style.transform = state.facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
             await initCamera();
         }
 
-        // キャンバスリサイズ
         function resizeCanvas() {
             const container = document.getElementById('camera-container');
             state.canvas.width = container.clientWidth;
             state.canvas.height = container.clientHeight;
         }
 
-        // AIモデル読み込み
         async function loadModel() {
             try {
                 elements.loadingText.textContent = 'AIモデルを読み込み中...';
                 
-                // Face Landmarks Detection モデル読み込み
                 state.model = await faceLandmarksDetection.createDetector(
                     faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
                     {
@@ -1163,14 +1523,12 @@
             }
         }
 
-        // エラー表示
         function showError(message) {
             elements.loadingOverlay.classList.add('hidden');
             elements.errorMessage.classList.remove('hidden');
             elements.errorText.textContent = message;
         }
 
-        // ステータス更新
         function updateStatus(text, active) {
             elements.statusText.textContent = text;
             if (active) {
@@ -1180,7 +1538,6 @@
             }
         }
 
-        // 測定開始/停止
         function toggleMeasurement() {
             if (state.isMeasuring) {
                 stopMeasurement();
@@ -1212,12 +1569,9 @@
                 測定開始
             `;
             updateStatus('停止中', false);
-            
-            // キャンバスクリア
             state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
         }
 
-        // 顔検出ループ
         async function detectFaces() {
             if (!state.isRunning || !state.model) return;
 
@@ -1226,7 +1580,6 @@
                     flipHorizontal: state.facingMode === 'user'
                 });
 
-                // キャンバスクリア
                 state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
 
                 if (predictions.length > 0) {
@@ -1247,46 +1600,33 @@
             }
         }
 
-        // 顔ランドマーク処理
         function processFaceLandmarks(face) {
             const keypoints = face.keypoints;
             
-            // MediaPipe Face Mesh の目のランドマークインデックス
-            // 左目（画像上では右）: 468（虹彩中心）
-            // 右目（画像上では左）: 473（虹彩中心）
-            // 虹彩の外側ポイントも使用して直径を推定
+            const leftIrisCenter = keypoints[468];
+            const leftIrisInner = keypoints[469];
+            const leftIrisOuter = keypoints[471];
             
-            // 左目の虹彩関連ポイント
-            const leftIrisCenter = keypoints[468]; // 左虹彩中心
-            const leftIrisInner = keypoints[469];  // 内側
-            const leftIrisOuter = keypoints[471];  // 外側
-            
-            // 右目の虹彩関連ポイント
-            const rightIrisCenter = keypoints[473]; // 右虹彩中心
-            const rightIrisInner = keypoints[474];  // 内側
-            const rightIrisOuter = keypoints[476];  // 外側
+            const rightIrisCenter = keypoints[473];
+            const rightIrisInner = keypoints[474];
+            const rightIrisOuter = keypoints[476];
 
             if (!leftIrisCenter || !rightIrisCenter) {
                 elements.guideText.textContent = '虹彩を検出できません。もう少し近づいてください。';
                 return;
             }
 
-            // 画面座標に変換
             const scaleX = state.canvas.width / state.video.videoWidth;
             const scaleY = state.canvas.height / state.video.videoHeight;
 
-            // 左目の計算
             const leftDiameter = calculateIrisDiameter(
                 leftIrisCenter, leftIrisInner, leftIrisOuter, scaleX, scaleY
             );
             
-            // 右目の計算
             const rightDiameter = calculateIrisDiameter(
                 rightIrisCenter, rightIrisInner, rightIrisOuter, scaleX, scaleY
             );
 
-            // 顔のサイズから瞳孔サイズを推定（キャリブレーション）
-            // 顔幅の参照（耳から耳）
             const leftEar = keypoints[234];
             const rightEar = keypoints[454];
             if (leftEar && rightEar) {
@@ -1294,33 +1634,39 @@
                     Math.pow((rightEar.x - leftEar.x) * scaleX, 2) +
                     Math.pow((rightEar.y - leftEar.y) * scaleY, 2)
                 );
-                // 平均的な顔幅は約14cm、虹彩直径は約11-12mm
-                // 瞳孔は虹彩の約30-50%
-                state.calibrationFactor = 140 / faceWidth; // mm/px
+                state.calibrationFactor = 140 / faceWidth;
             }
 
-            // ピクセルからmmに変換（瞳孔は虹彩の約30-40%として推定）
-            const pupilRatio = 0.35; // 瞳孔/虹彩比
+            const pupilRatio = 0.35;
             const leftPupilMM = leftDiameter * state.calibrationFactor * pupilRatio;
             const rightPupilMM = rightDiameter * state.calibrationFactor * pupilRatio;
 
-            // スムージング
             state.smoothedLeft = state.smoothedLeft * (1 - state.smoothingFactor) + 
                                  leftPupilMM * state.smoothingFactor;
             state.smoothedRight = state.smoothedRight * (1 - state.smoothingFactor) + 
                                   rightPupilMM * state.smoothingFactor;
 
-            // 結果更新
+            state.detectedPupils.left = {
+                x: leftIrisCenter.x / state.video.videoWidth,
+                y: leftIrisCenter.y / state.video.videoHeight,
+                size: state.smoothedLeft,
+                radiusPx: leftDiameter / 2
+            };
+            state.detectedPupils.right = {
+                x: rightIrisCenter.x / state.video.videoWidth,
+                y: rightIrisCenter.y / state.video.videoHeight,
+                size: state.smoothedRight,
+                radiusPx: rightDiameter / 2
+            };
+
             updateResults(state.smoothedLeft, state.smoothedRight);
 
-            // 描画
             drawEyeOverlay(leftIrisCenter, leftDiameter / 2 / state.calibrationFactor / pupilRatio, scaleX, scaleY, 'L');
             drawEyeOverlay(rightIrisCenter, rightDiameter / 2 / state.calibrationFactor / pupilRatio, scaleX, scaleY, 'R');
 
             elements.guideText.textContent = '測定中 - 顔を固定してください';
         }
 
-        // 虹彩直径計算
         function calculateIrisDiameter(center, inner, outer, scaleX, scaleY) {
             const innerDist = Math.sqrt(
                 Math.pow((center.x - inner.x) * scaleX, 2) +
@@ -1333,30 +1679,24 @@
             return (innerDist + outerDist);
         }
 
-        // 結果更新
         function updateResults(leftMM, rightMM) {
             const diff = Math.abs(leftMM - rightMM);
             
-            // 表示更新
             elements.leftPupil.innerHTML = `${leftMM.toFixed(1)}<span class="result-unit">mm</span>`;
             elements.rightPupil.innerHTML = `${rightMM.toFixed(1)}<span class="result-unit">mm</span>`;
             
-            // 差分表示
             const diffClass = diff > 1.0 ? 'danger' : diff > 0.5 ? 'warning' : '';
             elements.pupilDiff.className = `result-value ${diffClass}`;
             elements.pupilDiff.innerHTML = `${diff.toFixed(1)}<span class="result-unit">mm</span>`;
 
-            // 評価バッジ更新
             updateAssessment(diff);
 
-            // 測定値保存
             state.measurements.push({ left: leftMM, right: rightMM, diff, time: Date.now() });
             if (state.measurements.length > 30) {
                 state.measurements.shift();
             }
         }
 
-        // 評価更新
         function updateAssessment(diff) {
             let text, badgeClass;
             
@@ -1375,7 +1715,6 @@
             elements.assessmentBadge.className = `assessment-badge ${badgeClass}`;
         }
 
-        // 結果リセット
         function resetResults() {
             elements.leftPupil.innerHTML = '--<span class="result-unit">mm</span>';
             elements.rightPupil.innerHTML = '--<span class="result-unit">mm</span>';
@@ -1385,55 +1724,184 @@
             elements.assessmentBadge.className = 'assessment-badge badge-normal';
         }
 
-        // 目のオーバーレイ描画
         function drawEyeOverlay(center, radius, scaleX, scaleY, label) {
             const x = center.x * scaleX;
             const y = center.y * scaleY;
             const r = radius;
 
-            // 外円（虹彩）
             state.ctx.beginPath();
             state.ctx.arc(x, y, r, 0, Math.PI * 2);
-            state.ctx.strokeStyle = 'rgba(0, 212, 170, 0.8)';
-            state.ctx.lineWidth = 2;
+            state.ctx.strokeStyle = label === 'L' ? 'rgba(0, 212, 170, 0.8)' : 'rgba(74, 158, 255, 0.8)';
+            state.ctx.lineWidth = 3;
             state.ctx.stroke();
 
-            // 内円（瞳孔推定）
             state.ctx.beginPath();
             state.ctx.arc(x, y, r * 0.35, 0, Math.PI * 2);
-            state.ctx.strokeStyle = 'rgba(74, 158, 255, 0.8)';
+            state.ctx.strokeStyle = label === 'L' ? 'rgba(0, 212, 170, 0.6)' : 'rgba(74, 158, 255, 0.6)';
             state.ctx.lineWidth = 2;
             state.ctx.stroke();
 
-            // 中心点
             state.ctx.beginPath();
-            state.ctx.arc(x, y, 3, 0, Math.PI * 2);
-            state.ctx.fillStyle = '#00d4aa';
+            state.ctx.arc(x, y, 4, 0, Math.PI * 2);
+            state.ctx.fillStyle = label === 'L' ? '#00d4aa' : '#4a9eff';
             state.ctx.fill();
 
-            // ラベル
-            state.ctx.font = '14px sans-serif';
+            state.ctx.font = 'bold 14px sans-serif';
             state.ctx.fillStyle = '#ffffff';
             state.ctx.textAlign = 'center';
-            state.ctx.fillText(label, x, y - r - 10);
+            state.ctx.fillText(label, x, y - r - 12);
         }
 
-        // 結果記録
-        function captureResult() {
-            if (state.measurements.length === 0) return;
+        // ========================================
+        // 撮影機能
+        // ========================================
+        
+        function capturePhoto() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = state.video.videoWidth;
+            tempCanvas.height = state.video.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            if (state.facingMode === 'user') {
+                tempCtx.translate(tempCanvas.width, 0);
+                tempCtx.scale(-1, 1);
+            }
+            tempCtx.drawImage(state.video, 0, 0);
+            
+            state.capturedImageData = tempCanvas.toDataURL('image/jpeg', 0.9);
+            
+            if (state.isMeasuring) {
+                stopMeasurement();
+            }
+            
+            openCaptureModal();
+        }
 
-            // 直近の測定値の平均を計算
-            const recent = state.measurements.slice(-10);
-            const avgLeft = recent.reduce((sum, m) => sum + m.left, 0) / recent.length;
-            const avgRight = recent.reduce((sum, m) => sum + m.right, 0) / recent.length;
-            const avgDiff = Math.abs(avgLeft - avgRight);
+        function openCaptureModal() {
+            elements.capturedImage.src = state.capturedImageData;
+            elements.captureModal.classList.add('active');
+            
+            elements.capturedImage.onload = () => {
+                setTimeout(() => {
+                    positionMarkers();
+                    updateSliders();
+                }, 100);
+            };
+        }
 
-            // 履歴に追加
+        function closeCaptureModal() {
+            elements.captureModal.classList.remove('active');
+        }
+
+        function positionMarkers() {
+            const container = elements.captureImageContainer;
+            const img = elements.capturedImage;
+            const containerRect = container.getBoundingClientRect();
+            const imgRect = img.getBoundingClientRect();
+            
+            state.imageOffset = {
+                x: imgRect.left - containerRect.left,
+                y: imgRect.top - containerRect.top
+            };
+
+            const leftSize = Math.max(50, state.detectedPupils.left.size * 15);
+            const leftX = state.detectedPupils.left.x * imgRect.width + state.imageOffset.x;
+            const leftY = state.detectedPupils.left.y * imgRect.height + state.imageOffset.y;
+            
+            elements.leftMarker.style.width = leftSize + 'px';
+            elements.leftMarker.style.height = leftSize + 'px';
+            elements.leftMarker.style.left = (leftX - leftSize / 2) + 'px';
+            elements.leftMarker.style.top = (leftY - leftSize / 2) + 'px';
+
+            const rightSize = Math.max(50, state.detectedPupils.right.size * 15);
+            const rightX = state.detectedPupils.right.x * imgRect.width + state.imageOffset.x;
+            const rightY = state.detectedPupils.right.y * imgRect.height + state.imageOffset.y;
+            
+            elements.rightMarker.style.width = rightSize + 'px';
+            elements.rightMarker.style.height = rightSize + 'px';
+            elements.rightMarker.style.left = (rightX - rightSize / 2) + 'px';
+            elements.rightMarker.style.top = (rightY - rightSize / 2) + 'px';
+
+            updateMarkerLabels();
+        }
+
+        function updateSliders() {
+            const leftSize = Math.max(1, Math.min(10, state.detectedPupils.left.size));
+            const rightSize = Math.max(1, Math.min(10, state.detectedPupils.right.size));
+            
+            elements.leftSizeSlider.value = leftSize;
+            elements.rightSizeSlider.value = rightSize;
+            elements.leftSizeValue.textContent = leftSize.toFixed(1) + 'mm';
+            elements.rightSizeValue.textContent = rightSize.toFixed(1) + 'mm';
+            updateDiffDisplay();
+        }
+
+        function updateLeftSize() {
+            const size = parseFloat(elements.leftSizeSlider.value);
+            state.detectedPupils.left.size = size;
+            elements.leftSizeValue.textContent = size.toFixed(1) + 'mm';
+            
+            const markerSize = Math.max(50, size * 15);
+            const currentCenterX = elements.leftMarker.offsetLeft + elements.leftMarker.offsetWidth / 2;
+            const currentCenterY = elements.leftMarker.offsetTop + elements.leftMarker.offsetHeight / 2;
+            elements.leftMarker.style.width = markerSize + 'px';
+            elements.leftMarker.style.height = markerSize + 'px';
+            elements.leftMarker.style.left = (currentCenterX - markerSize / 2) + 'px';
+            elements.leftMarker.style.top = (currentCenterY - markerSize / 2) + 'px';
+            
+            updateMarkerLabels();
+            updateDiffDisplay();
+        }
+
+        function updateRightSize() {
+            const size = parseFloat(elements.rightSizeSlider.value);
+            state.detectedPupils.right.size = size;
+            elements.rightSizeValue.textContent = size.toFixed(1) + 'mm';
+            
+            const markerSize = Math.max(50, size * 15);
+            const currentCenterX = elements.rightMarker.offsetLeft + elements.rightMarker.offsetWidth / 2;
+            const currentCenterY = elements.rightMarker.offsetTop + elements.rightMarker.offsetHeight / 2;
+            elements.rightMarker.style.width = markerSize + 'px';
+            elements.rightMarker.style.height = markerSize + 'px';
+            elements.rightMarker.style.left = (currentCenterX - markerSize / 2) + 'px';
+            elements.rightMarker.style.top = (currentCenterY - markerSize / 2) + 'px';
+            
+            updateMarkerLabels();
+            updateDiffDisplay();
+        }
+
+        function updateMarkerLabels() {
+            elements.leftMarkerSize.textContent = state.detectedPupils.left.size.toFixed(1);
+            elements.rightMarkerSize.textContent = state.detectedPupils.right.size.toFixed(1);
+        }
+
+        function updateDiffDisplay() {
+            const diff = Math.abs(state.detectedPupils.left.size - state.detectedPupils.right.size);
+            elements.modalDiffValue.textContent = diff.toFixed(1) + 'mm';
+            
+            elements.modalDiffValue.classList.remove('normal', 'warning', 'danger');
+            if (diff <= 0.5) {
+                elements.modalDiffValue.classList.add('normal');
+            } else if (diff <= 1.0) {
+                elements.modalDiffValue.classList.add('warning');
+            } else {
+                elements.modalDiffValue.classList.add('danger');
+            }
+        }
+
+        function retakePhoto() {
+            closeCaptureModal();
+            setTimeout(() => {
+                startMeasurement();
+            }, 300);
+        }
+
+        function saveResult() {
             const record = {
                 time: new Date().toLocaleTimeString('ja-JP'),
-                left: avgLeft.toFixed(1),
-                right: avgRight.toFixed(1),
-                diff: avgDiff.toFixed(1)
+                left: state.detectedPupils.left.size.toFixed(1),
+                right: state.detectedPupils.right.size.toFixed(1),
+                diff: Math.abs(state.detectedPupils.left.size - state.detectedPupils.right.size).toFixed(1)
             };
             
             state.history.unshift(record);
@@ -1441,23 +1909,21 @@
                 state.history.pop();
             }
 
-            // 履歴表示更新
             updateHistoryDisplay();
-
-            // フィードバック
-            elements.captureBtn.textContent = '✓ 記録しました';
+            closeCaptureModal();
+            
+            elements.captureBtn.textContent = '✓ 記録完了';
             setTimeout(() => {
                 elements.captureBtn.innerHTML = `
                     <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
-                        <circle cx="12" cy="12" r="5"/>
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="12" r="7"/>
                     </svg>
-                    撮影・記録
+                    撮影
                 `;
             }, 1500);
         }
 
-        // 履歴表示更新
         function updateHistoryDisplay() {
             if (state.history.length === 0) {
                 elements.historyPanel.style.display = 'none';
@@ -1466,17 +1932,17 @@
 
             elements.historyPanel.style.display = 'block';
             elements.historyList.innerHTML = state.history.map(record => {
-                let diffClass = '';
-                if (parseFloat(record.diff) > 1.0) diffClass = 'danger';
-                else if (parseFloat(record.diff) > 0.5) diffClass = 'warning';
+                let diffColor = 'var(--primary)';
+                if (parseFloat(record.diff) > 1.0) diffColor = 'var(--danger)';
+                else if (parseFloat(record.diff) > 0.5) diffColor = 'var(--warning)';
                 
                 return `
                     <div class="history-item">
                         <span class="history-time">${record.time}</span>
                         <div class="history-values">
-                            <span>L:${record.left}</span>
-                            <span>R:${record.right}</span>
-                            <span class="history-diff ${diffClass ? `result-value ${diffClass}` : ''}" style="color: ${diffClass === 'danger' ? 'var(--danger)' : diffClass === 'warning' ? 'var(--warning)' : 'var(--primary)'}">Δ${record.diff}</span>
+                            <span style="color: var(--primary);">L:${record.left}</span>
+                            <span style="color: var(--secondary);">R:${record.right}</span>
+                            <span style="color: ${diffColor}; font-weight: 600;">Δ${record.diff}</span>
                         </div>
                     </div>
                 `;
@@ -1494,7 +1960,7 @@
         elements.installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
+                await deferredPrompt.userChoice;
                 deferredPrompt = null;
                 elements.installPrompt.classList.remove('show');
             }
